@@ -9,26 +9,22 @@ from functools import reduce
 from goals.goal import Goal
 from goals.goal.operations.composition import g_composition
 from logic.typeset import Typeset
-from itertools import combinations
 
 
 def maximize_coverage(types_to_cover: set[str],
                       library_elements: dict[str, set[str]]):
     print("maximising coverage...")
+    disjoint_combinations = []
+    for key in types_to_cover:
+        disjoint_combinations.append(set(elem for elem in library_elements if key in library_elements[elem]))
     # Create a list of all possible combinations of elements
-    element_combinations = [combinations(library_elements.keys(), i + 1) for i in range(len(library_elements))]
-
-    # Flatten the list of combinations
-    element_combinations = [comb for sublist in element_combinations for comb in sublist]
-
+    element_combinations = list(itertools.product(*disjoint_combinations))
     # Create a dictionary to store the coverage of each combination
     coverage = {}
     for comb in element_combinations:
         coverage[comb] = set()
         for element in comb:
             coverage[comb] |= library_elements[element]
-        coverage[comb] = coverage[comb].intersection(types_to_cover)
-
     # Sort the combinations by coverage in decreasing order
     sorted_combinations = sorted(coverage, key=lambda x: len(coverage[x]), reverse=True)
 
@@ -36,10 +32,20 @@ def maximize_coverage(types_to_cover: set[str],
 
 
 
-def get_candidate_composition(library: Library, goal_to_refine: Goal, evaluation: bool = False):
-    print(f"Searching among {len(library.goals)} elements...")
+def get_candidate_composition_efficient(library: dict[str, Goal], goal_to_refine: Goal, evaluation: bool = False):
+    print(f"Searching among {len(library)} elements...")
     candidates = Counter()
     best_similarity_score = 0
+
+    types_to_cover = set(t.name for t in list(goal_to_refine.contract.typeset.values()))
+    library_elements = {}
+    for id, goal in library.items():
+        library_elements[id] =  set(t.name for t in list(goal.contract.typeset.values()))
+
+    sorted_combinations = maximize_coverage(types_to_cover, library_elements)
+
+    for i, b in sorted_combinations.items():
+        print(f"{i}: {b}")
 
     for n in range(1, len(library.goals)):
         for subset in itertools.combinations(library.goals, n):

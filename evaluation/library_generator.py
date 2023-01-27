@@ -22,6 +22,3 @@ def spec_library_generator(max_number_clauses: int = 5) -> list[LTL]:
         i += 3
 
     return specs
-
-
-def trivial_library_search

@@ -46,12 +46,12 @@ class Controller:
         a, g, i, o = self.spec.to_strix
         self._realizable, self._automaton, self._synth_time = self.generate_from_spec(a, g, i, o)
 
-        self._spot_automaton = spot.automaton(self._automaton)
-
-        self._pydotgraph = pydot.graph_from_dot_data(self._spot_automaton.to_str("dot"))[0]
-        self._mealy = Mealy.from_pydotgraph(
-            self._pydotgraph, input_aps=self.input_aps, output_aps=self.output_aps
-        )
+        # self._spot_automaton = spot.automaton(self._automaton)
+        #
+        # self._pydotgraph = pydot.graph_from_dot_data(self._spot_automaton.to_str("dot"))[0]
+        # self._mealy = Mealy.from_pydotgraph(
+        #     self._pydotgraph, input_aps=self.input_aps, output_aps=self.output_aps
+        # )
 
     @classmethod
     def from_ltl(cls, guarantees: LTL, assumptions: LTL | None = None, name: str = ""):
