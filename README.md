@@ -60,8 +60,8 @@ conda activate ./.venv
 > To configure VSCode to support PEP 582, open `.vscode/settings.json` (create one if it does not exist) and add the following entries:
 > ```json
 > {
->   "python.autoComplete.extraPaths": ["__pypackages__/3.10/lib"],
->   "python.analysis.extraPaths": ["__pypackages__/3.10/lib"]
+>   "python.autoComplete.extraPaths": ["__pypackages__/3.11/lib"],
+>   "python.analysis.extraPaths": ["__pypackages__/3.11/lib"]
 > }
 > ```
 

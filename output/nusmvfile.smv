@@ -1,0 +1,19 @@
+MODULE main
+VAR
+	p12: boolean;
+	p10: boolean;
+	p7: boolean;
+	p6: boolean;
+	p1: boolean;
+	p4: boolean;
+	p2: boolean;
+	p9: boolean;
+	p5: boolean;
+	p3: boolean;
+	p8: boolean;
+	p11: boolean;
+	p0: boolean;
+	p14: boolean;
+	p13: boolean;
+
+LTLSPEC !(G (F p0 U (p1 | X p2)) & G F p3 & G F (p4 & F p5) & G (F p6 U (F p7 & X p8)) & G F p9 & G F (p10 & F p11) & G (F p12 U (p13 | X p14)))

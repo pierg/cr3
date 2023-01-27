@@ -1,0 +1,156 @@
+# type: ignore
+import subprocess
+from enum import Enum
+from typing import List
+
+import docker
+from bloom_filter import BloomFilter
+
+from logic.specification.string_logic import not_
+from logic.specification.tools import is_false_string, is_true_string
+from logic.tools.string_manipulation import add_spaces_spot_ltl
+from shared.paths import nusmv_file_path, output_folder, nusmvfilename
+
+bloom_sat_yes: BloomFilter = BloomFilter(max_elements=10000, error_rate=0.1)
+bloom_val_yes: BloomFilter = BloomFilter(max_elements=10000, error_rate=0.1)
+bloom_val_no: BloomFilter = BloomFilter(max_elements=10000, error_rate=0.1)
+bloom_sat_no: BloomFilter = BloomFilter(max_elements=10000, error_rate=0.1)
+
+
+class CheckType(Enum):
+    SATISFIABILITY = 0
+    VALIDITY = 1
+
+
+def check_satisfiability(expression: str, aps: list[str]) -> bool:
+    if is_true_string(expression):
+        return True
+
+    if is_false_string(expression):
+        return False
+
+    if expression in bloom_sat_yes:
+        print("\t\t\tSAT-SKIPPED (YES):\t" + expression)
+        return True
+
+    if expression in bloom_sat_no:
+        print("\t\t\tSAT-SKIPPED (NO):\t" + expression)
+        return False
+
+    _write_file(aps, expression, CheckType.SATISFIABILITY)
+
+    print(f"\t\t\tChecking SAT:\t\t{expression}")
+    output = _launch_nuxmv()
+
+    sat = _parse_output(output, CheckType.SATISFIABILITY)
+
+    if sat:
+        bloom_sat_yes.add(expression)
+    else:
+        bloom_sat_no.add(expression)
+
+    return sat
+
+
+def check_validity(expression: str, aps: list[str]) -> bool:
+    if is_true_string(expression):
+        return True
+
+    if is_false_string(expression):
+        return False
+
+    print(f"\t\t\tChecking VAL:\t\t{expression}")
+
+    if expression in bloom_val_yes:
+        print("\t\t\tVAL-SKIPPED (YES):\t" + expression)
+        return True
+
+    if expression in bloom_val_no:
+        print("\t\t\tVAL-SKIPPED (NO):\t" + expression)
+        return False
+
+    _write_file(aps, expression, CheckType.VALIDITY)
+
+    output = _launch_nuxmv()
+
+    valid = _parse_output(output, CheckType.VALIDITY)
+
+    if valid:
+        bloom_val_yes.add(expression)
+    else:
+        bloom_val_no.add(expression)
+
+    return valid
+
+
+def _write_file(variables: List[str], expression: str, check_type: CheckType):
+    expression = add_spaces_spot_ltl(expression)
+    with open(nusmv_file_path, "w") as ofile:
+        ofile.write("MODULE main\n")
+        ofile.write("VAR\n")
+        for v in list(set(variables)):
+            ofile.write(f"\t{v};\n")
+        ofile.write("\n")
+        ofile.write("LTLSPEC ")
+        if check_type == CheckType.SATISFIABILITY:
+            ofile.write(str(not_(expression)))
+        elif check_type == CheckType.VALIDITY:
+            ofile.write(str(expression))
+        else:
+            raise Exception("Type of checking not supported")
+        ofile.write("\n")
+
+
+def _parse_output(output: List[str], check_type: CheckType) -> bool:
+    for line in output:
+        if line[:16] == "-- specification":
+            spec = line[16:].partition("is")[0]
+            if "is false" in line:
+                if check_type == CheckType.SATISFIABILITY:
+                    print("\t\t\tSAT-YES:\t" + spec)
+                    return True
+                elif check_type == CheckType.VALIDITY:
+                    print("\t\t\tVAL-NO :\t" + spec)
+                    return False
+                else:
+                    raise Exception("Type of checking not supported")
+            elif "is true" in line:
+                if check_type == CheckType.SATISFIABILITY:
+                    print("\t\t\tSAT-NO :\t" + spec)
+                    return False
+                elif check_type == CheckType.VALIDITY:
+                    print("\t\t\tVAL-YES:\t" + spec)
+                    return True
+                else:
+                    raise Exception("Type of checking not supported")
+            else:
+                raise Exception("nuSMV produced something unexpected")
+
+
+def _launch_nuxmv() -> List[str]:
+    # print("Launching nuSMV....")
+    try:
+        """ "Trying nuSMV locally."""
+        output = subprocess.check_output(
+            ["nuSMV", nusmv_file_path], encoding="UTF-8", stderr=subprocess.DEVNULL
+        ).splitlines()
+
+    except Exception as e :
+        print(e)
+        """ "Trying nuSMV with docker."""
+        docker_image = "pmallozzi/ltltools"
+        client = docker.from_env()
+        output = str(
+            client.containers.run(
+                image=docker_image,
+                volumes={f"{output_folder}": {"bind": "/home/", "mode": "rw"}},
+                command=f"nuSMV /home/{nusmvfilename}",
+                remove=True,
+            )
+        ).split("\\n")
+
+    output = [
+        x for x in output if not (x[:3] == "***" or x[:7] == "WARNING" or x == "")
+    ]
+    # print("nuSMV has terminated!")
+    return output

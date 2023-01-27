@@ -40,6 +40,14 @@ lock:
 check:
 	@$(DUTY) check-quality check-types check-docs check-dependencies
 
+
+.PHONY: install
+install:
+	pdm install
+	conda create --prefix ./.venv python=3.11
+	conda activate ./.venv
+	conda env update --file conda-dependencies.yml --prune
+
 .PHONY: uninstall
 uninstall:
 	rm -rf .coverage*

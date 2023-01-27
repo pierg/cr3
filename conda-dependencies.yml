@@ -1,0 +1,9 @@
+channels:
+  - default
+  - conda-forge
+
+dependencies:
+  - spot
+  - python-igraph
+  - pygraphviz
+  - matplotlib

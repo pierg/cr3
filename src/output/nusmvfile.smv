@@ -1,0 +1,7 @@
+MODULE main
+VAR
+	l1f: boolean;
+	l2f: boolean;
+	l3b: boolean;
+
+LTLSPEC !(F l1 & F l5 & G (!l3b | X l3b) & G (!l2f | X l3b | X l1f | X l2f) & G (!l1f | X l1f | X l2f) & G ((!l1f & l2f & !l3b) | (l1f & !l2f & !l3b) | (!l1f & !l2f & l3b)))
